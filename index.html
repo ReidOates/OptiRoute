@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiRoute — Delivery Route Optimization Simulator</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <header class="glass-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>OptiRoute</h1>
+                    <p>AI Delivery Route Optimization Simulator</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator idle" id="statusIndicator">
+                    <span class="status-pulse"></span>
+                    <i class="fa-solid fa-circle-dot"></i> <span id="statusText">System Ready</span>
+                </span>
+            </div>
+        </header>
+
+        <!-- DASHBOARD GRID -->
+        <div class="dashboard-grid">
+            
+            <!-- LEFT PANEL: CONTROLS -->
+            <aside class="glass-card controls-sidebar">
+                <div class="sidebar-title">
+                    <i class="fa-solid fa-sliders"></i>
+                    <h2>Control Panel</h2>
+                </div>
+
+                <div class="control-group">
+                    <label for="pointCount">
+                        <span>Number of Delivery Points</span>
+                        <span class="tooltip" title="Select how many delivery destinations to optimize"><i class="fa-solid fa-circle-info"></i></span>
+                    </label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                        <input type="number" id="pointCount" value="15" min="5" max="100">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="algorithm">Select Algorithm</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-brain"></i>
+                        <select id="algorithm">
+                            <option>Hill Climbing</option>
+                            <option>Simulated Annealing</option>
+                            <option>Genetic Algorithm</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- SIMULATED ANNEALING PARAMETERS -->
+                <div id="saParameters" class="parameter-card">
+                    <h3 class="param-card-title"><i class="fa-solid fa-fire-flame-simple"></i> SA Parameters</h3>
+                    <div class="control-group">
+                        <label for="temperature">Initial Temperature</label>
+                        <input type="number" id="temperature" value="500">
+                    </div>
+                    <div class="control-group">
+                        <label for="saCoolingRate">Cooling Rate</label>
+                        <input type="number" id="saCoolingRate" value="0.97" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label for="saMaxIterations">Max Iterations</label>
+                        <input type="number" id="saMaxIterations" value="300">
+                    </div>
+                </div>
+
+                <!-- GENETIC ALGORITHM PARAMETERS -->
+                <div id="gaParameters" class="parameter-card">
+                    <h3 class="param-card-title"><i class="fa-solid fa-dna"></i> GA Parameters</h3>
+                    <div class="control-group">
+                        <label for="populationSize">Population Size</label>
+                        <input type="number" id="populationSize" value="30">
+                    </div>
+                    <div class="control-group">
+                        <label for="mutationRate">Mutation Rate</label>
+                        <input type="number" id="mutationRate" value="0.05" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label for="generations">Generations</label>
+                        <input type="number" id="generations" value="100" min="10" max="500">
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="generateBtn" class="btn btn-outline">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Generate Points</span>
+                    </button>
+                    <button id="startBtn" class="btn btn-primary">
+                        <i class="fa-solid fa-play"></i>
+                        <span>Start Simulation</span>
+                    </button>
+                    <button id="compareBtn" class="btn btn-accent">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                        <span>Compare Algorithms</span>
+                    </button>
+                    <button id="resetBtn" class="btn btn-danger">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Reset Simulator</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- RIGHT PANEL: WORKSPACE -->
+            <main class="main-workspace">
+                
+                <!-- VISUALIZATION CANVAS -->
+                <section class="glass-card canvas-card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <i class="fa-solid fa-map"></i>
+                            <h2>Route Visualizer</h2>
+                        </div>
+                        <span class="badge" id="canvasBadge">Random Points</span>
+                    </div>
+                    <div class="canvas-container">
+                        <div class="canvas-hud-corners">
+                            <div class="hud-corner top-left"></div>
+                            <div class="hud-corner top-right"></div>
+                            <div class="hud-corner bottom-left"></div>
+                            <div class="hud-corner bottom-right"></div>
+                        </div>
+                        <canvas id="routeCanvas"></canvas>
+                    </div>
+                </section>
+
+                <!-- REAL-TIME METRICS -->
+                <section id="statsCards" class="metrics-grid">
+                    
+                    <div class="metric-card glass-card">
+                        <div class="metric-icon distance">
+                            <i class="fa-solid fa-route"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Total Distance</h3>
+                            <p><span id="distanceValue">0.00</span> <span class="unit">px</span></p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass-card">
+                        <div class="metric-icon iterations">
+                            <i class="fa-solid fa-circle-notch"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Iterations</h3>
+                            <p id="iterationValue">0</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass-card">
+                        <div class="metric-icon time">
+                            <i class="fa-solid fa-stopwatch"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Execution Time</h3>
+                            <p><span id="timeValue">0.00 s</span></p>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- COMPARISON & GRAPHICS BOTTOM AREA -->
+                <div class="bottom-split-grid">
+                    
+                    <!-- BENCHMARK TABLE -->
+                    <section id="benchmarkSection" class="glass-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i class="fa-solid fa-list-check"></i>
+                                <h2>Benchmark Results</h2>
+                            </div>
+                        </div>
+                        <div class="tableWrapper">
+                            <table id="benchmarkTable">
+                                <thead>
+                                    <tr>
+                                        <th>Algorithm</th>
+                                        <th>Distance (px)</th>
+                                        <th>Iterations</th>
+                                        <th>Time (s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- CONVERGENCE CHART -->
+                    <section id="chartSection" class="glass-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <h2>Optimization Convergence</h2>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="convergenceChart"></canvas>
+                        </div>
+                    </section>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- MAIN SCRIPT -->
+    <script src="app.js"></script>
+
+</body>
+</html>
